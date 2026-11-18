@@ -30,20 +30,6 @@ def main():
             # Execute as one transaction: either the schema succeeds or it rolls back.
             with conn.transaction():
                 conn.execute(SCHEMA.read_text(encoding='utf-8'))
-                # Safely backfill any existing unlinked chat messages into conversations
-                conn.execute("""
-                    INSERT INTO conversations (id, tenant_id, owner_sub, created_at, updated_at)
-                    SELECT
-                        conversation_id,
-                        tenant_id,
-                        'demo-operator',
-                        MIN(created_at),
-                        MAX(created_at)
-                    FROM chat_messages
-                    WHERE conversation_id NOT IN (SELECT id FROM conversations)
-                    GROUP BY conversation_id, tenant_id
-                    ON CONFLICT (id) DO NOTHING;
-                """)
             with conn.cursor() as cur:
                 cur.execute('SELECT current_database()')
                 dbname = cur.fetchone()[0]

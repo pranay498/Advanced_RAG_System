@@ -1,6 +1,13 @@
+-- =========================================
+-- 1. EXTENSIONS
+-- =========================================
+
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 
 -- =========================================
--- 1. DOCUMENTS TABLE
+-- 2. DOCUMENTS TABLE
 -- =========================================
 
 CREATE TABLE IF NOT EXISTS documents (
@@ -10,7 +17,7 @@ CREATE TABLE IF NOT EXISTS documents (
     title TEXT NOT NULL,
     owner_sub TEXT NOT NULL,
 
-    allowed_groups TEXT[] NOT NULL,
+    allowed_groups TEXT[] NOT NULL DEFAULT '{}',
 
     s3_key TEXT NOT NULL UNIQUE,
 
@@ -31,8 +38,9 @@ CREATE TABLE IF NOT EXISTS documents (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+
 -- =========================================
--- 2. DOCUMENTS INDEX
+-- 3. DOCUMENTS INDEX
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS documents_acl_idx
@@ -40,7 +48,7 @@ ON documents (tenant_id, status);
 
 
 -- =========================================
--- 3. FEEDBACK TABLE
+-- 4. FEEDBACK TABLE
 -- =========================================
 
 CREATE TABLE IF NOT EXISTS feedback (
@@ -59,7 +67,7 @@ CREATE TABLE IF NOT EXISTS feedback (
 
 
 -- =========================================
--- 4. AUDIT EVENTS TABLE
+-- 5. AUDIT EVENTS TABLE
 -- =========================================
 
 CREATE TABLE IF NOT EXISTS audit_events (
@@ -69,14 +77,14 @@ CREATE TABLE IF NOT EXISTS audit_events (
     tenant_id TEXT NOT NULL,
 
     action TEXT NOT NULL,
-    detail JSONB NOT NULL,
+    detail JSONB NOT NULL DEFAULT '{}',
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 
 -- =========================================
--- 5. AUDIT EVENTS INDEX
+-- 6. AUDIT EVENTS INDEX
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS audit_tenant_time
@@ -84,7 +92,7 @@ ON audit_events (tenant_id, created_at DESC);
 
 
 -- =========================================
--- 6. APPROVALS TABLE
+-- 7. APPROVALS TABLE
 -- =========================================
 
 CREATE TABLE IF NOT EXISTS approvals (
@@ -112,7 +120,7 @@ CREATE TABLE IF NOT EXISTS approvals (
 
 
 -- =========================================
--- 7. APPROVALS INDEX
+-- 8. APPROVALS INDEX
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS approvals_tenant_idx
@@ -120,7 +128,7 @@ ON approvals (tenant_id, status);
 
 
 -- =========================================
--- 8. CONVERSATIONS TABLE
+-- 9. CONVERSATIONS TABLE
 -- =========================================
 
 CREATE TABLE IF NOT EXISTS conversations (
@@ -135,7 +143,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 
 
 -- =========================================
--- 9. CONVERSATIONS INDEX
+-- 10. CONVERSATIONS INDEX
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS conversations_tenant_owner_idx
@@ -143,16 +151,14 @@ ON conversations (tenant_id, owner_sub, created_at DESC);
 
 
 -- =========================================
--- 10. CHAT MESSAGES TABLE
+-- 11. CHAT MESSAGES TABLE
 -- =========================================
-
--- Persistent short-term conversation memory
--- Stored in PostgreSQL / Aurora.
 
 CREATE TABLE IF NOT EXISTS chat_messages (
     id BIGSERIAL PRIMARY KEY,
 
     tenant_id TEXT NOT NULL,
+
     conversation_id UUID NOT NULL
         REFERENCES conversations(id) ON DELETE CASCADE,
 
@@ -166,7 +172,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 
 -- =========================================
--- 11. CHAT MESSAGES INDEX
+-- 12. CHAT MESSAGES INDEX
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS chat_messages_session_idx
@@ -174,10 +180,8 @@ ON chat_messages (tenant_id, conversation_id, id DESC);
 
 
 -- =========================================
--- 12. DOCUMENT CHUNKS
+-- 13. DOCUMENT CHUNKS TABLE
 -- =========================================
-
-CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS document_chunks (
     chunk_id TEXT PRIMARY KEY,
@@ -188,7 +192,6 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     tenant_id TEXT NOT NULL,
 
     version INTEGER NOT NULL,
-
     chunk_index INTEGER NOT NULL,
 
     title TEXT NOT NULL,
@@ -207,18 +210,21 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 
 
 -- =========================================
--- 13. DOCUMENT CHUNKS INDEXES
+-- 14. DOCUMENT CHUNKS INDEXES
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS chunks_tenant_idx
 ON document_chunks (tenant_id);
 
+
 CREATE INDEX IF NOT EXISTS chunks_document_idx
 ON document_chunks (document_id, version);
+
 
 CREATE INDEX IF NOT EXISTS chunks_embedding_idx
 ON document_chunks
 USING hnsw (embedding vector_cosine_ops);
+
 
 CREATE INDEX IF NOT EXISTS document_chunks_bm25_idx
 ON document_chunks

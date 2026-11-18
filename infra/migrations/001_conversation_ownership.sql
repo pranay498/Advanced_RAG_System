@@ -1,53 +1,53 @@
--- =============================================================================
--- Migration: 001_conversation_ownership.sql
--- Description: Introduce conversations table with owner_sub and link chat_messages
--- Safe to rerun: Preserves existing data, handles missing ownership, and avoids duplicate constraints
--- =============================================================================
+-- -- =============================================================================
+-- -- Migration: 001_conversation_ownership.sql
+-- -- Description: Introduce conversations table with owner_sub and link chat_messages
+-- -- Safe to rerun: Preserves existing data, handles missing ownership, and avoids duplicate constraints
+-- -- =============================================================================
 
--- 1. Create conversations table if it does not already exist
-CREATE TABLE IF NOT EXISTS conversations (
-    id UUID PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
-    owner_sub TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+-- -- 1. Create conversations table if it does not already exist
+-- CREATE TABLE IF NOT EXISTS conversations (
+--     id UUID PRIMARY KEY,
+--     tenant_id TEXT NOT NULL,
+--     owner_sub TEXT NOT NULL,
+--     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+--     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+-- );
 
--- 2. Create index on conversations for tenant, owner, and timestamp
-CREATE INDEX IF NOT EXISTS conversations_tenant_owner_idx
-ON conversations (tenant_id, owner_sub, created_at DESC);
+-- -- 2. Create index on conversations for tenant, owner, and timestamp
+-- CREATE INDEX IF NOT EXISTS conversations_tenant_owner_idx
+-- ON conversations (tenant_id, owner_sub, created_at DESC);
 
--- 3. Safely backfill existing conversations from chat_messages
--- Existing conversations with missing ownership are safely assigned to 'demo-operator'
-INSERT INTO conversations (id, tenant_id, owner_sub, created_at, updated_at)
-SELECT
-    conversation_id,
-    tenant_id,
-    'demo-operator',
-    MIN(created_at),
-    MAX(created_at)
-FROM chat_messages
-WHERE conversation_id NOT IN (SELECT id FROM conversations)
-GROUP BY conversation_id, tenant_id
-ON CONFLICT (id) DO NOTHING;
+-- -- 3. Safely backfill existing conversations from chat_messages
+-- -- Existing conversations with missing ownership are safely assigned to 'demo-operator'
+-- INSERT INTO conversations (id, tenant_id, owner_sub, created_at, updated_at)
+-- SELECT
+--     conversation_id,
+--     tenant_id,
+--     'demo-operator',
+--     MIN(created_at),
+--     MAX(created_at)
+-- FROM chat_messages
+-- WHERE conversation_id NOT IN (SELECT id FROM conversations)
+-- GROUP BY conversation_id, tenant_id
+-- ON CONFLICT (id) DO NOTHING;
 
--- 4. Ensure any existing rows with missing/empty owner_sub are safely updated
-UPDATE conversations
-SET owner_sub = 'demo-operator'
-WHERE owner_sub IS NULL OR TRIM(owner_sub) = '';
+-- -- 4. Ensure any existing rows with missing/empty owner_sub are safely updated
+-- UPDATE conversations
+-- SET owner_sub = 'demo-operator'
+-- WHERE owner_sub IS NULL OR TRIM(owner_sub) = '';
 
--- 5. Add foreign key constraint to chat_messages if not already present
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint
-        WHERE conname = 'fk_chat_messages_conversation'
-    ) THEN
-        ALTER TABLE chat_messages
-        ADD CONSTRAINT fk_chat_messages_conversation
-        FOREIGN KEY (conversation_id)
-        REFERENCES conversations(id)
-        ON DELETE CASCADE;
-    END IF;
-END $$;
+-- -- 5. Add foreign key constraint to chat_messages if not already present
+-- DO $$
+-- BEGIN
+--     IF NOT EXISTS (
+--         SELECT 1
+--         FROM pg_constraint
+--         WHERE conname = 'fk_chat_messages_conversation'
+--     ) THEN
+--         ALTER TABLE chat_messages
+--         ADD CONSTRAINT fk_chat_messages_conversation
+--         FOREIGN KEY (conversation_id)
+--         REFERENCES conversations(id)
+--         ON DELETE CASCADE;
+--     END IF;
+-- END $$;
