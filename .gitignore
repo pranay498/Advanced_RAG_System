@@ -1,0 +1,115 @@
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ==============================
+# Virtual Environments
+# ==============================
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# ==============================
+# Environment Variables / Secrets
+# ==============================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials.json
+service-account.json
+
+# ==============================
+# Jupyter Notebook
+# ==============================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ==============================
+# IDE / Editor
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ==============================
+# Logs
+# ==============================
+*.log
+logs/
+
+# ==============================
+# Build / Distribution
+# ==============================
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+
+# ==============================
+# Testing / Coverage
+# ==============================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ==============================
+# Model Weights / Checkpoints
+# ==============================
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+*.h5
+*.ckpt
+checkpoints/
+models/
+weights/
+
+# ==============================
+# Hugging Face Cache
+# ==============================
+.cache/
+huggingface_cache/
+**/.cache/huggingface/
+
+# ==============================
+# Vector Database / RAG Storage
+# ==============================
+chroma_db/
+chroma/
+vector_db/
+faiss_index/
+*.faiss
+*.index
+
+# ==============================
+# Data / Uploaded Files
+# ==============================
+data/raw/
+data/processed/
+uploads/
+temp/
+tmp/
+
+# ==============================
+# OS Files
+# ==============================
+Thumbs.db
+.DS_Store
