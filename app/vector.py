@@ -119,7 +119,18 @@ def upsert(tenant, records):
 
             conn.execute(
                 """
-                INSERT INTO document_chunks (chunk_id,document_id, tenant_id,version,chunk_index,title,page,text,owner_sub,allowed_groups,embedding)
+                INSERT INTO 
+                document_chunks,
+                chunk_id,
+                document_id, 
+                tenant_id,version,
+                chunk_index,
+                title,
+                page,
+                text,
+                owner_sub,
+                allowed_groups,
+                embedding
                 VALUES (%s,%s::uuid,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector)
                 ON CONFLICT (chunk_id)
 
@@ -197,7 +208,14 @@ def pgvector_search(tenant, vector, groups, owner, limit):
 
         rows = conn.execute(
             """
-            SELECT (chunk_id, document_id, title, page,text,owner_sub,allowed_groups, 1 - (embedding <=> %s::vector) AS score
+            SELECT chunk_id,
+             document_id, 
+             title, 
+             page,
+             text,
+             owner_sub,
+             allowed_groups, 
+             1 - (embedding <=> %s::vector) AS score
             FROM document_chunks
             WHERE tenant_id = %s
             AND(owner_sub = %s OR allowed_groups && %s::text[])

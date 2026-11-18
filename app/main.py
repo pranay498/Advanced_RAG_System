@@ -12,7 +12,14 @@ from app.config import settings
 from app.db import connection, audit
 from app.rag import chat
 from app.guardrails import check_input, classify_input
-from app.memory import history, save_turn, list_messages
+from app.memory import (
+    history,
+    save_turn,
+    list_messages,
+    ensure_conversation,
+    ConversationAccessDeniedError,
+    ConversationNotFoundError,
+)
 from worker.ingest import process_s3_key
 
 
@@ -280,7 +287,7 @@ def documents( p: Principal = Depends(principal)):
 
         rows = conn.execute(
             """
-            SELECT (id, title, status, current_version, created_at, allowed_groups)
+            SELECT id, title, status, current_version, created_at, allowed_groups
             FROM documents
             WHERE tenant_id = %s
               AND (
@@ -323,6 +330,24 @@ def ask( body: Ask, p: Principal = Depends(principal)):
             detail=(
                 f'Input guardrail blocked this request ({reason}).'
             )
+        )
+
+    # Create or reuse conversation ID.
+    conversation_id = (
+        body.conversation_id or uuid.uuid4()
+    )
+
+    # Verify conversation ownership or initialize new conversation for current principal
+    try:
+        ensure_conversation(
+            p.tenant,
+            conversation_id,
+            p.subject
+        )
+    except ConversationAccessDeniedError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc)
         )
 
     # Human-in-the-loop approval.
@@ -378,18 +403,15 @@ def ask( body: Ask, p: Principal = Depends(principal)):
             ),
             'sources': [],
             'status': 'pending_approval',
-            'approval_id': str(row['id'])
+            'approval_id': str(row['id']),
+            'conversation_id': str(conversation_id)
         }
-
-    # Create or reuse conversation ID.
-    conversation_id = (
-        body.conversation_id or uuid.uuid4()
-    )
 
     # Fetch previous conversation history.
     prior = history(
         p.tenant,
-        conversation_id
+        conversation_id,
+        p.subject
     )
 
     # Execute LangGraph RAG workflow.
@@ -404,7 +426,8 @@ def ask( body: Ask, p: Principal = Depends(principal)):
         p.tenant,
         conversation_id,
         body.question,
-        result['answer']
+        result['answer'],
+        p.subject
     )
 
     # Check output guardrail result.
@@ -436,20 +459,33 @@ def ask( body: Ask, p: Principal = Depends(principal)):
 
 # =========================================
 # 9. CONVERSATION MESSAGES
-# =========================================
-
+# ========================================
 @app.get('/api/conversations/{conversation_id}/messages')
 def conversation_messages(
     conversation_id: uuid.UUID,
     p: Principal = Depends(principal)
 ):
 
+    try:
+        messages = list_messages(
+            p.tenant,
+            conversation_id,
+            p.subject
+        )
+    except ConversationNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail='Conversation not found'
+        )
+    except ConversationAccessDeniedError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc)
+        )
+
     return {
         'conversation_id': str(conversation_id),
-        'messages': list_messages(
-            p.tenant,
-            conversation_id
-        )
+        'messages': messages
     }
 
 

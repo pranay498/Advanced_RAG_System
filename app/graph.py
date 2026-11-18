@@ -43,6 +43,7 @@ def retrieve(s):
 
     hits = search(
         p.tenant,
+        query,
         embed(query),
         p.groups,
         p.subject
@@ -52,10 +53,9 @@ def retrieve(s):
     relevant_hits = []
 
     for hit in hits:
-        if hit['score'] >= settings().min_relevance:
-            relevant_hits.append(hit)
+        relevant_hits.append(hit)
 
-    # Prepare source information.
+  
     sources = []
 
     for i, hit in enumerate(relevant_hits):

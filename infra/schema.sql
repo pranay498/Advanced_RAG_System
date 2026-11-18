@@ -120,7 +120,30 @@ ON approvals (tenant_id, status);
 
 
 -- =========================================
--- 8. CHAT MESSAGES TABLE
+-- 8. CONVERSATIONS TABLE
+-- =========================================
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY,
+
+    tenant_id TEXT NOT NULL,
+    owner_sub TEXT NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+-- =========================================
+-- 9. CONVERSATIONS INDEX
+-- =========================================
+
+CREATE INDEX IF NOT EXISTS conversations_tenant_owner_idx
+ON conversations (tenant_id, owner_sub, created_at DESC);
+
+
+-- =========================================
+-- 10. CHAT MESSAGES TABLE
 -- =========================================
 
 -- Persistent short-term conversation memory
@@ -130,7 +153,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     id BIGSERIAL PRIMARY KEY,
 
     tenant_id TEXT NOT NULL,
-    conversation_id UUID NOT NULL,
+    conversation_id UUID NOT NULL
+        REFERENCES conversations(id) ON DELETE CASCADE,
 
     role TEXT NOT NULL
         CHECK (role IN ('user', 'assistant')),
@@ -142,15 +166,15 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 
 -- =========================================
--- 9. CHAT MESSAGES INDEX
+-- 11. CHAT MESSAGES INDEX
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS chat_messages_session_idx
-ON chat_messages (tenant_id, conversation_id,id DESC);
+ON chat_messages (tenant_id, conversation_id, id DESC);
 
 
 -- =========================================
--- 10. DOCUMENT CHUNKS
+-- 12. DOCUMENT CHUNKS
 -- =========================================
 
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -183,7 +207,7 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 
 
 -- =========================================
--- 11. DOCUMENT CHUNKS INDEXES
+-- 13. DOCUMENT CHUNKS INDEXES
 -- =========================================
 
 CREATE INDEX IF NOT EXISTS chunks_tenant_idx
