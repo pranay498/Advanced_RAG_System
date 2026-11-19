@@ -119,8 +119,7 @@ def upsert(tenant, records):
 
             conn.execute(
                 """
-                INSERT INTO 
-                document_chunks,
+                INSERT INTO document_chunks (
                 chunk_id,
                 document_id, 
                 tenant_id,version,
@@ -131,7 +130,20 @@ def upsert(tenant, records):
                 owner_sub,
                 allowed_groups,
                 embedding
-                VALUES (%s,%s::uuid,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector)
+                )
+                VALUES (
+                        %s,
+                        %s::uuid,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s,
+                        %s::vector
+                      )
                 ON CONFLICT (chunk_id)
 
                 DO UPDATE SET

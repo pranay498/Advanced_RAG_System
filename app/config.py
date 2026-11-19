@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     min_relevance:float=0.25
     hitl_enabled:bool=True
     memory_turns:int=6
+    gemini_api_key:str=''
+    gemini_chat_model:str='gemini-2.5-flash'
+    grok_api_key:str=''
+    grok_chat_model:str='grok-2-latest'
+    routing_provider:str='bedrock'
+    routing_model:str=''
 
 
 @lru_cache

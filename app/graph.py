@@ -6,6 +6,7 @@ from app.aws import embed, answer
 from app.vector import search
 from app.config import settings
 from app.guardrails import check_input, check_output
+from app.llm import get_default_gateway
 
 
 class State(TypedDict, total=False):
@@ -16,6 +17,8 @@ class State(TypedDict, total=False):
     sources: list
     status: str
     history: list
+    gateway: Any
+    routing: dict
 
 
 @trace("guard")
@@ -110,15 +113,18 @@ def generate(s):
 
     evidence = '\n\n'.join(evidence_parts)
 
-    generated_answer = answer(
-        s['question'],
-        evidence,
-        s.get('history', [])
+    gw = s.get('gateway') or get_default_gateway()
+
+    generated_answer, decision = gw.generate_answer(
+        question=s['question'],
+        evidence=evidence,
+        history=s.get('history', [])
     )
 
     return {
         'answer': generated_answer,
-        'status': 'answered'
+        'status': 'answered',
+        'routing': decision.model_dump()
     }
 
 
@@ -166,15 +172,17 @@ graph = make_graph()
 
 
 @trace("chat")
-def chat(p, question, history=None):
+def chat(p, question, history=None, gateway=None):
     r = graph.invoke({
         'principal': p,
         'question': question,
-        'history': history or []
+        'history': history or [],
+        'gateway': gateway or get_default_gateway()
     })
 
     return {
         'answer': r['answer'],
         'sources': r.get('sources', []),
-        'status': r.get('status', 'answered')
+        'status': r.get('status', 'answered'),
+        'routing': r.get('routing', {})
     }
